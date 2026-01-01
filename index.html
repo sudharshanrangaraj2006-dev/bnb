@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Opt Calsi</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Opt Calsi Pro</title>
 
 <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
@@ -26,7 +27,7 @@ body{
 
 /* Header */
 .header{
-    padding:16px 20px;
+    padding:14px 18px;
     background:#0E1628;
     border-bottom:1px solid var(--border);
     font-size:20px;
@@ -36,25 +37,25 @@ body{
 
 /* Card */
 .card{
-    max-width:1200px;
-    margin:20px auto;
+    max-width:1300px;
+    margin:15px auto;
     background:var(--card);
     border-radius:12px;
-    padding:20px;
+    padding:18px;
     box-shadow:0 0 0 1px var(--border);
 }
 
 /* Form */
 .form-grid{
     display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
-    gap:15px;
+    grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+    gap:14px;
 }
 
 label{
-    font-size:13px;
+    font-size:12px;
     color:var(--muted);
-    margin-bottom:5px;
+    margin-bottom:4px;
     display:block;
 }
 
@@ -65,7 +66,7 @@ input{
     border:1px solid var(--border);
     background:#0E1628;
     color:white;
-    font-size:15px;
+    font-size:14px;
 }
 
 input:focus{
@@ -75,56 +76,72 @@ input:focus{
 
 /* Buttons */
 .actions{
-    margin-top:18px;
+    margin-top:16px;
     display:flex;
     gap:10px;
     flex-wrap:wrap;
 }
 
 .btn{
-    padding:12px 18px;
+    padding:11px 16px;
     border:none;
     border-radius:8px;
     font-weight:600;
     cursor:pointer;
-    font-size:14px;
+    font-size:13px;
 }
 
-.btn-primary{
-    background:var(--accent);
-    color:white;
+.btn-primary{ background:var(--accent); color:white; }
+.btn-secondary{ background:#1E2A44; color:white; }
+
+/* Summary */
+.summary{
+    margin-top:18px;
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+    gap:12px;
 }
 
-.btn-secondary{
-    background:#1E2A44;
-    color:white;
+.summary div{
+    background:#0E1628;
+    padding:14px;
+    border-radius:10px;
+    border:1px solid var(--border);
+}
+
+.summary span{
+    color:var(--muted);
+    font-size:12px;
 }
 
 /* Table */
 .table-wrap{
-    overflow-x:auto;
-    margin-top:20px;
+    overflow:auto;
+    margin-top:18px;
+    max-height:60vh;
 }
 
 table{
     width:100%;
     border-collapse:collapse;
-    min-width:900px;
+    min-width:950px;
 }
 
 th{
+    position:sticky;
+    top:0;
     background:#0E1628;
     color:var(--accent);
-    padding:12px;
-    font-size:13px;
+    padding:10px;
+    font-size:12px;
     border-bottom:1px solid var(--border);
 }
 
 td{
-    padding:10px;
+    padding:9px;
     text-align:right;
     border-bottom:1px solid var(--border);
-    font-size:14px;
+    font-size:13px;
 }
 
 td:first-child{
@@ -132,21 +149,21 @@ td:first-child{
     color:var(--muted);
 }
 
-tr:hover{
-    background:#0E1628;
+tr.highlight{
+    background:#1E2A44;
 }
 </style>
 </head>
 
 <body>
 
-<div class="header">Opt Calsi</div>
+<div class="header">Opt Calsi Pro</div>
 
 <div class="card">
     <div class="form-grid">
         <div>
             <label>Capital</label>
-            <input type="number" id="capital" step="0.01" placeholder="100000">
+            <input type="number" id="capital" placeholder="100000">
         </div>
         <div>
             <label>Margin Cap (0.1 – 0.5)</label>
@@ -160,96 +177,114 @@ tr:hover{
             <label>No. of Days</label>
             <input type="number" id="days" placeholder="30">
         </div>
+        <div>
+            <label>Go To Day</label>
+            <input type="number" id="gotoDay" placeholder="10">
+        </div>
     </div>
 
     <div class="actions">
         <button class="btn btn-primary" onclick="calculate()">Calculate</button>
+        <button class="btn btn-secondary" onclick="goToDay()">Go</button>
         <button class="btn btn-secondary" onclick="exportExcel()">Export Excel</button>
+        <button class="btn btn-secondary" onclick="resetAll()">Reset</button>
     </div>
+
+    <div class="summary" id="summary"></div>
 
     <div class="table-wrap" id="result"></div>
 </div>
 
 <script>
-function rnd(val){
-    return Math.round(val * 100) / 100;
-}
+const fmt = n => n.toLocaleString(undefined,{maximumFractionDigits:2});
 
 function calculate(){
-    let capitalVal = Number(document.getElementById("capital").value);
-    let marginCap = Number(document.getElementById("mg_cap").value);
-    let percentVal = Number(document.getElementById("percent").value);
-    let daysVal = Number(document.getElementById("days").value);
+    let capital = +capital.value;
+    let mg = +mg_cap.value;
+    let pct = +percent.value;
+    let days = +days.value;
 
-    if(!capitalVal || !marginCap || !percentVal || !daysVal){
-        alert("Please fill all fields correctly");
+    if(!capital || !mg || !pct || !days){
+        alert("Fill all fields correctly");
         return;
     }
 
-    let html = `
-    <table id="calcTable">
-        <tr>
-            <th>DAYS</th>
-            <th>OP CAP</th>
-            <th>MARGIN</th>
-            <th>RET %</th>
-            <th>PROFIT</th>
-            <th>M TURN</th>
-            <th>GROSS CAP</th>
-            <th>CHARGES</th>
-            <th>NET CAP</th>
-        </tr>`;
+    let html = `<table id="calcTable">
+    <tr>
+        <th>DAY</th><th>OP CAP</th><th>MARGIN</th><th>RET %</th>
+        <th>PROFIT</th><th>M TURN</th><th>GROSS</th>
+        <th>CHARGES</th><th>NET CAP</th>
+    </tr>`;
 
-    let o_capital = capitalVal;
+    let op = capital, totalCharges = 0;
 
-    for(let d=1; d<=daysVal; d++){
-        let margin = o_capital * marginCap;
-        let profit = margin * percentVal / 100;
+    for(let d=1; d<=days; d++){
+        let margin = op * mg;
+        let profit = margin * pct / 100;
         let mturn = margin + profit;
-        let turnover = o_capital + profit;
+        let gross = op + profit;
 
-        let buy = margin;
-        let sell = mturn;
+        let buy = margin, sell = mturn;
+        let charges =
+            (buy+sell)*0.0006 +
+            sell*0.001 +
+            buy*0.00003 +
+            (buy+sell)*0.000005 +
+            (buy+sell)*0.000001 +
+            40;
 
-        let tc = (buy + sell) * 0.0006;
-        let sst = sell * 0.001;
-        let stamp = buy * 0.00003;
-        let ipft = (buy + sell) * 0.000005;
-        let sebi = (buy + sell) * 0.000001;
-        let brokerage = 40;
-        let gst = (tc + brokerage + sebi + ipft) * 0.18;
+        let gst = charges * 0.18;
+        charges += gst;
 
-        let charges = tc + sst + stamp + sebi + brokerage + gst + ipft;
-        let net = turnover - charges;
+        let net = gross - charges;
+        totalCharges += charges;
 
-        html += `
-        <tr>
+        html += `<tr id="day${d}">
             <td>Day ${d}</td>
-            <td>${rnd(o_capital)}</td>
-            <td>${rnd(margin)}</td>
-            <td>${percentVal}</td>
-            <td>${rnd(profit)}</td>
-            <td>${rnd(mturn)}</td>
-            <td>${rnd(turnover)}</td>
-            <td>${rnd(charges)}</td>
-            <td>${rnd(net)}</td>
+            <td>${fmt(op)}</td>
+            <td>${fmt(margin)}</td>
+            <td>${pct}</td>
+            <td>${fmt(profit)}</td>
+            <td>${fmt(mturn)}</td>
+            <td>${fmt(gross)}</td>
+            <td>${fmt(charges)}</td>
+            <td>${fmt(net)}</td>
         </tr>`;
 
-        o_capital = net;
+        op = net;
     }
 
     html += "</table>";
-    document.getElementById("result").innerHTML = html;
+    result.innerHTML = html;
+
+    summary.innerHTML = `
+        <div><span>Final Capital</span><br><b>${fmt(op)}</b></div>
+        <div><span>Total Profit</span><br><b>${fmt(op-capital)}</b></div>
+        <div><span>Total Charges</span><br><b>${fmt(totalCharges)}</b></div>
+    `;
+}
+
+function goToDay(){
+    let d = +gotoDay.value;
+    document.querySelectorAll("tr").forEach(r=>r.classList.remove("highlight"));
+    let row = document.getElementById("day"+d);
+    if(row){
+        row.classList.add("highlight");
+        row.scrollIntoView({behavior:"smooth",block:"center"});
+    }
 }
 
 function exportExcel(){
     let table = document.getElementById("calcTable");
-    if(!table){
-        alert("Please calculate first");
-        return;
-    }
-    let wb = XLSX.utils.table_to_book(table, {sheet:"Opt Calsi"});
-    XLSX.writeFile(wb, "OptCalsi_AngelOne.xlsx");
+    if(!table) return;
+    let wb = XLSX.utils.table_to_book(table,{sheet:"Opt Calsi"});
+    XLSX.writeFile(wb,"opt_calsi.xlsx");
+}
+
+function resetAll(){
+    document.querySelectorAll("input").forEach(i=>i.value="");
+    result.innerHTML="";
+    summary.innerHTML="";
 }
 </script>
 
