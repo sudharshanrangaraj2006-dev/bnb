@@ -25,7 +25,6 @@ body{
     color:var(--text);
 }
 
-/* Header */
 .header{
     padding:14px 18px;
     background:#0E1628;
@@ -35,7 +34,6 @@ body{
     color:var(--accent);
 }
 
-/* Card */
 .card{
     max-width:1300px;
     margin:15px auto;
@@ -45,7 +43,6 @@ body{
     box-shadow:0 0 0 1px var(--border);
 }
 
-/* Form */
 .form-grid{
     display:grid;
     grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
@@ -74,7 +71,6 @@ input:focus{
     border-color:var(--accent);
 }
 
-/* Buttons */
 .actions{
     margin-top:16px;
     display:flex;
@@ -94,7 +90,6 @@ input:focus{
 .btn-primary{ background:var(--accent); color:white; }
 .btn-secondary{ background:#1E2A44; color:white; }
 
-/* Summary */
 .summary{
     margin-top:18px;
     display:grid;
@@ -114,7 +109,6 @@ input:focus{
     font-size:12px;
 }
 
-/* Table */
 .table-wrap{
     overflow:auto;
     margin-top:18px;
@@ -163,23 +157,23 @@ tr.highlight{
     <div class="form-grid">
         <div>
             <label>Capital</label>
-            <input type="number" id="capital" placeholder="100000">
+            <input type="number" id="capitalInput" placeholder="100000">
         </div>
         <div>
             <label>Margin Cap (0.1 – 0.5)</label>
-            <input type="number" id="mg_cap" step="0.01" placeholder="0.2">
+            <input type="number" id="marginInput" step="0.01" placeholder="0.2">
         </div>
         <div>
             <label>Return %</label>
-            <input type="number" id="percent" step="0.01" placeholder="1.5">
+            <input type="number" id="percentInput" step="0.01" placeholder="1.5">
         </div>
         <div>
             <label>No. of Days</label>
-            <input type="number" id="days" placeholder="30">
+            <input type="number" id="daysInput" placeholder="30">
         </div>
         <div>
             <label>Go To Day</label>
-            <input type="number" id="gotoDay" placeholder="10">
+            <input type="number" id="gotoDayInput" placeholder="10">
         </div>
     </div>
 
@@ -191,7 +185,6 @@ tr.highlight{
     </div>
 
     <div class="summary" id="summary"></div>
-
     <div class="table-wrap" id="result"></div>
 </div>
 
@@ -199,32 +192,46 @@ tr.highlight{
 const fmt = n => n.toLocaleString(undefined,{maximumFractionDigits:2});
 
 function calculate(){
-    let capital = +capital.value;
-    let mg = +mg_cap.value;
-    let pct = +percent.value;
-    let days = +days.value;
+    const capitalInput = document.getElementById("capitalInput");
+    const marginInput = document.getElementById("marginInput");
+    const percentInput = document.getElementById("percentInput");
+    const daysInput = document.getElementById("daysInput");
 
-    if(!capital || !mg || !pct || !days){
-        alert("Fill all fields correctly");
+    let capital = Number(capitalInput.value);
+    let marginCap = Number(marginInput.value);
+    let percent = Number(percentInput.value);
+    let days = Number(daysInput.value);
+
+    if(!capital || !marginCap || !percent || !days){
+        alert("Please fill all fields correctly");
         return;
     }
 
     let html = `<table id="calcTable">
-    <tr>
-        <th>DAY</th><th>OP CAP</th><th>MARGIN</th><th>RET %</th>
-        <th>PROFIT</th><th>M TURN</th><th>GROSS</th>
-        <th>CHARGES</th><th>NET CAP</th>
-    </tr>`;
+        <tr>
+            <th>DAY</th>
+            <th>OP CAP</th>
+            <th>MARGIN</th>
+            <th>RET %</th>
+            <th>PROFIT</th>
+            <th>M TURN</th>
+            <th>GROSS</th>
+            <th>CHARGES</th>
+            <th>NET CAP</th>
+        </tr>`;
 
-    let op = capital, totalCharges = 0;
+    let opCapital = capital;
+    let totalCharges = 0;
 
     for(let d=1; d<=days; d++){
-        let margin = op * mg;
-        let profit = margin * pct / 100;
-        let mturn = margin + profit;
-        let gross = op + profit;
+        let margin = opCapital * marginCap;
+        let profit = margin * percent / 100;
+        let mTurn = margin + profit;
+        let gross = opCapital + profit;
 
-        let buy = margin, sell = mturn;
+        let buy = margin;
+        let sell = mTurn;
+
         let charges =
             (buy+sell)*0.0006 +
             sell*0.001 +
@@ -241,50 +248,50 @@ function calculate(){
 
         html += `<tr id="day${d}">
             <td>Day ${d}</td>
-            <td>${fmt(op)}</td>
+            <td>${fmt(opCapital)}</td>
             <td>${fmt(margin)}</td>
-            <td>${pct}</td>
+            <td>${percent}</td>
             <td>${fmt(profit)}</td>
-            <td>${fmt(mturn)}</td>
+            <td>${fmt(mTurn)}</td>
             <td>${fmt(gross)}</td>
             <td>${fmt(charges)}</td>
             <td>${fmt(net)}</td>
         </tr>`;
 
-        op = net;
+        opCapital = net;
     }
 
     html += "</table>";
-    result.innerHTML = html;
+    document.getElementById("result").innerHTML = html;
 
-    summary.innerHTML = `
-        <div><span>Final Capital</span><br><b>${fmt(op)}</b></div>
-        <div><span>Total Profit</span><br><b>${fmt(op-capital)}</b></div>
+    document.getElementById("summary").innerHTML = `
+        <div><span>Final Capital</span><br><b>${fmt(opCapital)}</b></div>
+        <div><span>Total Profit</span><br><b>${fmt(opCapital - capital)}</b></div>
         <div><span>Total Charges</span><br><b>${fmt(totalCharges)}</b></div>
     `;
 }
 
 function goToDay(){
-    let d = +gotoDay.value;
+    const day = Number(document.getElementById("gotoDayInput").value);
     document.querySelectorAll("tr").forEach(r=>r.classList.remove("highlight"));
-    let row = document.getElementById("day"+d);
+    const row = document.getElementById("day"+day);
     if(row){
         row.classList.add("highlight");
-        row.scrollIntoView({behavior:"smooth",block:"center"});
+        row.scrollIntoView({behavior:"smooth", block:"center"});
     }
 }
 
 function exportExcel(){
-    let table = document.getElementById("calcTable");
+    const table = document.getElementById("calcTable");
     if(!table) return;
-    let wb = XLSX.utils.table_to_book(table,{sheet:"Opt Calsi"});
+    const wb = XLSX.utils.table_to_book(table,{sheet:"Opt Calsi"});
     XLSX.writeFile(wb,"opt_calsi.xlsx");
 }
 
 function resetAll(){
     document.querySelectorAll("input").forEach(i=>i.value="");
-    result.innerHTML="";
-    summary.innerHTML="";
+    document.getElementById("result").innerHTML="";
+    document.getElementById("summary").innerHTML="";
 }
 </script>
 
