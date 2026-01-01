@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Opt Calsi</title>
+<script type="text/javascript" src="https://unpkg.com/xlsx@0.15.1/dist/xlsx.full.min.js"></script>
+<style>
+table {
+border-collapse: collapse;
+border: 2px solid #000;
+width: 100%;
+}
+td, th {
+text-align:right;
+padding: 10px;
+}
+td{ border-right:2px solid #000;}
+th{ border: 2px solid #000;text-align: center;}
+.td{ text-align:center; }
+.button1{padding:15px;background-color:lime;border-radius:10px;border:2px solid lime;font-weight:bold;font-size:15px;margin-left:20px;"}
+</style>
+</head>
+<body>
+<form style="margin-left:10px;margin-right:10px;position:fixed;top:0;background-color:#fff;width:96%;border:2px solid black;padding:5px;overflow: hidden;">
+<span style="font-size:20px;"> Day : <input type="Number" id="day"></span>
+<button class="button1" onclick="goto()">G O</button></form>
+<div style="margin-top:30px;height:1500px;padding:16px;">
+<script type="text/javascript">
+alert("Stocks Calsi");
+var o_capital,c_capital,mg_cap,percent,days,profit,day,output,margin,charges,marginturnover,turnover,download;
+var tc,sst,stampduty,sebi,brokerage,gst,ipft,dp,pledge=0;
+o_capital=Number(prompt("Enter your Cpt : ",""));
+mg_cap=Number(prompt("Enter your Mg cap(0.1 to 0.5) : ",""));
+percent=Number(prompt("Enter the Percent : ",""));
+days=Number(prompt("Enter the no.of days : ",""));
+download=1;
+
+function goto(){
+	var page=parseInt(document.getElementById("day").value);
+	if ((page==1)||(page==2)||(page==3)){location.href="#0";}
+	location.href="#"+String(page-2);
+}
+function ExportToExcel(type, fn, dl) {
+	var elt = document.getElementById('tbl_exporttable_to_xls');
+	var wb = XLSX.utils.table_to_book(elt, { sheet: "sheet1" });
+	return dl ?
+	XLSX.write(wb, { bookType: type, bookSST: true, type: 'base64' }):
+	XLSX.writeFile(wb, fn || ('MySheetName.' + (type || 'xlsx')));
+}
+function rnd(a){
+	a*=100.00;
+	a=Math.round(a);
+	a/=100.00;
+	return a;
+}
+document.write("<div id='0'><br></div>");
+document.write("<br><br><br><br><br><br><table id=\"tbl_exporttable_to_xls\" border=\"1\"><tr class='row1'><th>DAYS</th><th>OPCA</th><th>M1</th><th>RET</th><th>PRO</th><th>MTURN</th><th>GROSS CLOCAP</th><th>CHARTA</th><th>NET CLOCAP</th></tr>");
+
+for(day=1;day<=days;day++){
+	margin=o_capital*mg_cap;
+	profit=(margin*(percent/100.00));
+	marginturnover=margin+profit;
+	turnover=o_capital+profit;
+
+	buy=margin;
+	sell=marginturnover;
+	tc = (buy*0.0006)+(sell*0.0006);
+	sst = sell*0.001;
+	stampduty = buy*0.00003;
+	ipft = (buy*0.000005)+(sell*0.000005);
+	sebi = (buy*0.000001)+(sell*0.000001);
+	brokerage=40;
+	gst = (tc+brokerage+sebi+ipft)*0.18;
+
+	charges=tc+sst+stampduty+sebi+brokerage+gst+ipft;
+	console.log("charges"+charges+" tc"+tc+" sst"+sst+" stampduty"+stampduty+" sebi"+sebi+" brokerage"+brokerage+" gst"+gst+" ipft"+ipft);
+	c_capital=turnover - charges;
+	o_capital=rnd(o_capital);
+	margin=rnd(margin);
+	profit=rnd(profit);
+	marginturnover=rnd(marginturnover);
+	turnover=rnd(turnover);
+	charges=rnd(charges);
+	c_capital=rnd(c_capital);
+
+
+
+
+	output="<tr id='"+String(day)+"'><td class='td'>Day :"+String(day)+"</td>"+"<td>"+String(o_capital)+"</td>"+"<td>"+String(margin)+"</td>"+"<td>"+String(percent)+"</td>"+"<td>"+String(profit)+"</td>"+"<td>"+String(marginturnover)+"</td>"+"<td>"+String(turnover)+"</td>"+"<td>"+String(charges)+"</td>"+"<td>"+String(c_capital)+"</td>"+"</tr>";
+
+	o_capital=c_capital;
+
+	document.write(output);
+}
+
+document.write("</table>");
+location.href="#0";
+// to download //if(download==1){ExportToExcel("xlsx");}
+</script>
+</div>
+</body>
+</html>
