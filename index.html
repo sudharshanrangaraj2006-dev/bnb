@@ -1,130 +1,238 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<title>Opt Calsi</title>
+<meta charset="UTF-8">
+<title>Opt Calsi | Angel One Theme</title>
 
-<!-- Excel Export -->
 <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
 <style>
-table {
-    border-collapse: collapse;
-    border: 2px solid #000;
-    width: 100%;
+:root{
+    --bg:#0B1220;
+    --card:#121A2F;
+    --accent:#F45C20;
+    --text:#EAEAEA;
+    --muted:#9AA4B2;
 }
-td, th {
-    text-align:right;
-    padding: 10px;
-}
-td { border-right:2px solid #000; }
-th { border:2px solid #000; text-align:center; }
-.td { text-align:center; }
 
-.button1 {
-    padding:15px;
-    background-color:lime;
-    border-radius:10px;
-    border:2px solid lime;
-    font-weight:bold;
+*{ box-sizing:border-box; font-family: "Segoe UI", sans-serif; }
+
+body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+}
+
+/* Header */
+.header{
+    padding:16px;
+    background:#0E1628;
+    border-bottom:1px solid #1E2A44;
+    font-size:20px;
+    font-weight:600;
+    color:var(--accent);
+}
+
+/* Card */
+.card{
+    max-width:1200px;
+    margin:20px auto;
+    background:var(--card);
+    border-radius:12px;
+    padding:20px;
+    box-shadow:0 0 0 1px #1E2A44;
+}
+
+/* Form */
+.form-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+    gap:15px;
+}
+
+label{
+    font-size:13px;
+    color:var(--muted);
+}
+
+input{
+    width:100%;
+    padding:10px;
+    border-radius:8px;
+    border:1px solid #1E2A44;
+    background:#0E1628;
+    color:white;
     font-size:15px;
+}
+
+input:focus{
+    outline:none;
+    border-color:var(--accent);
+}
+
+/* Buttons */
+.btn{
+    padding:12px 18px;
+    border:none;
+    border-radius:8px;
+    font-weight:600;
+    cursor:pointer;
+}
+
+.btn-primary{
+    background:var(--accent);
+    color:white;
+}
+
+.btn-secondary{
+    background:#1E2A44;
+    color:white;
+}
+
+/* Table */
+.table-wrap{
+    overflow-x:auto;
+    margin-top:20px;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    min-width:900px;
+}
+
+th{
+    background:#0E1628;
+    color:var(--accent);
+    padding:12px;
+    font-size:13px;
+    border-bottom:1px solid #1E2A44;
+}
+
+td{
+    padding:10px;
+    text-align:right;
+    border-bottom:1px solid #1E2A44;
+    font-size:14px;
+}
+
+td:first-child{
+    text-align:center;
+    color:var(--muted);
+}
+
+tr:hover{
+    background:#0E1628;
+}
+
+/* Footer buttons */
+.actions{
+    margin-top:15px;
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
 }
 </style>
 </head>
 
 <body>
 
-<h2>Stocks Calculator</h2>
+<div class="header">Opt Calsi – Angel One Theme</div>
 
-<form onsubmit="calculate(); return false;">
-    Capital:
-    <input type="number" id="capital" step="0.01" required>
+<div class="card">
+    <div class="form-grid">
+        <div>
+            <label>Capital</label>
+            <input type="number" id="capital" step="0.01">
+        </div>
+        <div>
+            <label>Margin Cap (0.1 – 0.5)</label>
+            <input type="number" id="mg_cap" step="0.01">
+        </div>
+        <div>
+            <label>Return %</label>
+            <input type="number" id="percent" step="0.01">
+        </div>
+        <div>
+            <label>No. of Days</label>
+            <input type="number" id="days">
+        </div>
+    </div>
 
-    Margin Cap (0.1 – 0.5):
-    <input type="number" id="mg_cap" step="0.01" required>
+    <div class="actions">
+        <button class="btn btn-primary" onclick="calculate()">Calculate</button>
+        <button class="btn btn-secondary" onclick="ExportToExcel()">Export Excel</button>
+    </div>
 
-    Percent:
-    <input type="number" id="percent" step="0.01" required>
-
-    Days:
-    <input type="number" id="days" required>
-
-    <button class="button1">CALCULATE</button>
-    <button class="button1" type="button" onclick="ExportToExcel('xlsx')">EXPORT</button>
-</form>
-
-<br>
-
-<div id="result"></div>
+    <div class="table-wrap" id="result"></div>
+</div>
 
 <script>
 function rnd(a){
-    return Math.round(a * 100) / 100;
+    return Math.round(a*100)/100;
 }
 
 function calculate(){
-    let o_capital = Number(document.getElementById("capital").value);
-    let mg_cap = Number(document.getElementById("mg_cap").value);
-    let percent = Number(document.getElementById("percent").value);
-    let days = Number(document.getElementById("days").value);
+    let o_capital = +capital.value;
+    let mg_cap = +mg_cap.value;
+    let percent = +percent.value;
+    let days = +days.value;
 
     let html = `
-    <table id="tbl_exporttable_to_xls">
+    <table id="tbl">
         <tr>
             <th>DAYS</th>
-            <th>OPCA</th>
-            <th>M1</th>
-            <th>RET</th>
-            <th>PRO</th>
-            <th>MTURN</th>
-            <th>GROSS CLOCAP</th>
+            <th>OP CA</th>
+            <th>MARGIN</th>
+            <th>RET %</th>
+            <th>PROFIT</th>
+            <th>M TURN</th>
+            <th>GROSS CAP</th>
             <th>CHARGES</th>
-            <th>NET CLOCAP</th>
+            <th>NET CAP</th>
         </tr>`;
 
-    for(let day=1; day<=days; day++){
+    for(let d=1; d<=days; d++){
         let margin = o_capital * mg_cap;
-        let profit = margin * (percent / 100);
-        let marginturnover = margin + profit;
+        let profit = margin * percent / 100;
+        let mturn = margin + profit;
         let turnover = o_capital + profit;
 
-        let buy = margin;
-        let sell = marginturnover;
-
-        let tc = (buy * 0.0006) + (sell * 0.0006);
-        let sst = sell * 0.001;
-        let stampduty = buy * 0.00003;
-        let ipft = (buy * 0.000005) + (sell * 0.000005);
-        let sebi = (buy * 0.000001) + (sell * 0.000001);
+        let buy = margin, sell = mturn;
+        let tc = (buy+sell)*0.0006;
+        let sst = sell*0.001;
+        let stamp = buy*0.00003;
+        let ipft = (buy+sell)*0.000005;
+        let sebi = (buy+sell)*0.000001;
         let brokerage = 40;
-        let gst = (tc + brokerage + sebi + ipft) * 0.18;
+        let gst = (tc+brokerage+sebi+ipft)*0.18;
 
-        let charges = tc + sst + stampduty + sebi + brokerage + gst + ipft;
-        let c_capital = turnover - charges;
+        let charges = tc+sst+stamp+sebi+brokerage+gst+ipft;
+        let net = turnover - charges;
 
         html += `
         <tr>
-            <td class="td">Day ${day}</td>
+            <td>Day ${d}</td>
             <td>${rnd(o_capital)}</td>
             <td>${rnd(margin)}</td>
-            <td>${rnd(percent)}</td>
+            <td>${percent}</td>
             <td>${rnd(profit)}</td>
-            <td>${rnd(marginturnover)}</td>
+            <td>${rnd(mturn)}</td>
             <td>${rnd(turnover)}</td>
             <td>${rnd(charges)}</td>
-            <td>${rnd(c_capital)}</td>
+            <td>${rnd(net)}</td>
         </tr>`;
 
-        o_capital = c_capital;
+        o_capital = net;
     }
 
     html += "</table>";
-    document.getElementById("result").innerHTML = html;
+    result.innerHTML = html;
 }
 
-function ExportToExcel(type){
-    let elt = document.getElementById('tbl_exporttable_to_xls');
-    let wb = XLSX.utils.table_to_book(elt, { sheet: "Sheet1" });
-    XLSX.writeFile(wb, "Opt_Calsi.xlsx");
+function ExportToExcel(){
+    let wb = XLSX.utils.table_to_book(document.getElementById("tbl"));
+    XLSX.writeFile(wb,"OptCalsi_AngelOne.xlsx");
 }
 </script>
 
