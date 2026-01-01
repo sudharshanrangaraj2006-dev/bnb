@@ -13,9 +13,10 @@
     --accent:#F45C20;
     --text:#EAEAEA;
     --muted:#9AA4B2;
+    --border:#1E2A44;
 }
 
-*{ box-sizing:border-box; font-family: "Segoe UI", sans-serif; }
+*{ box-sizing:border-box; font-family:"Segoe UI",sans-serif; }
 
 body{
     margin:0;
@@ -25,9 +26,9 @@ body{
 
 /* Header */
 .header{
-    padding:16px;
+    padding:16px 20px;
     background:#0E1628;
-    border-bottom:1px solid #1E2A44;
+    border-bottom:1px solid var(--border);
     font-size:20px;
     font-weight:600;
     color:var(--accent);
@@ -40,7 +41,7 @@ body{
     background:var(--card);
     border-radius:12px;
     padding:20px;
-    box-shadow:0 0 0 1px #1E2A44;
+    box-shadow:0 0 0 1px var(--border);
 }
 
 /* Form */
@@ -53,13 +54,15 @@ body{
 label{
     font-size:13px;
     color:var(--muted);
+    margin-bottom:5px;
+    display:block;
 }
 
 input{
     width:100%;
     padding:10px;
     border-radius:8px;
-    border:1px solid #1E2A44;
+    border:1px solid var(--border);
     background:#0E1628;
     color:white;
     font-size:15px;
@@ -71,12 +74,20 @@ input:focus{
 }
 
 /* Buttons */
+.actions{
+    margin-top:18px;
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+}
+
 .btn{
     padding:12px 18px;
     border:none;
     border-radius:8px;
     font-weight:600;
     cursor:pointer;
+    font-size:14px;
 }
 
 .btn-primary{
@@ -106,13 +117,13 @@ th{
     color:var(--accent);
     padding:12px;
     font-size:13px;
-    border-bottom:1px solid #1E2A44;
+    border-bottom:1px solid var(--border);
 }
 
 td{
     padding:10px;
     text-align:right;
-    border-bottom:1px solid #1E2A44;
+    border-bottom:1px solid var(--border);
     font-size:14px;
 }
 
@@ -123,14 +134,6 @@ td:first-child{
 
 tr:hover{
     background:#0E1628;
-}
-
-/* Footer buttons */
-.actions{
-    margin-top:15px;
-    display:flex;
-    gap:10px;
-    flex-wrap:wrap;
 }
 </style>
 </head>
@@ -143,46 +146,51 @@ tr:hover{
     <div class="form-grid">
         <div>
             <label>Capital</label>
-            <input type="number" id="capital" step="0.01">
+            <input type="number" id="capital" step="0.01" placeholder="100000">
         </div>
         <div>
             <label>Margin Cap (0.1 – 0.5)</label>
-            <input type="number" id="mg_cap" step="0.01">
+            <input type="number" id="mg_cap" step="0.01" placeholder="0.2">
         </div>
         <div>
             <label>Return %</label>
-            <input type="number" id="percent" step="0.01">
+            <input type="number" id="percent" step="0.01" placeholder="1.5">
         </div>
         <div>
             <label>No. of Days</label>
-            <input type="number" id="days">
+            <input type="number" id="days" placeholder="30">
         </div>
     </div>
 
     <div class="actions">
         <button class="btn btn-primary" onclick="calculate()">Calculate</button>
-        <button class="btn btn-secondary" onclick="ExportToExcel()">Export Excel</button>
+        <button class="btn btn-secondary" onclick="exportExcel()">Export Excel</button>
     </div>
 
     <div class="table-wrap" id="result"></div>
 </div>
 
 <script>
-function rnd(a){
-    return Math.round(a*100)/100;
+function rnd(val){
+    return Math.round(val * 100) / 100;
 }
 
 function calculate(){
-    let o_capital = +capital.value;
-    let mg_cap = +mg_cap.value;
-    let percent = +percent.value;
-    let days = +days.value;
+    let capitalVal = Number(document.getElementById("capital").value);
+    let marginCap = Number(document.getElementById("mg_cap").value);
+    let percentVal = Number(document.getElementById("percent").value);
+    let daysVal = Number(document.getElementById("days").value);
+
+    if(!capitalVal || !marginCap || !percentVal || !daysVal){
+        alert("Please fill all fields correctly");
+        return;
+    }
 
     let html = `
-    <table id="tbl">
+    <table id="calcTable">
         <tr>
             <th>DAYS</th>
-            <th>OP CA</th>
+            <th>OP CAP</th>
             <th>MARGIN</th>
             <th>RET %</th>
             <th>PROFIT</th>
@@ -192,22 +200,26 @@ function calculate(){
             <th>NET CAP</th>
         </tr>`;
 
-    for(let d=1; d<=days; d++){
-        let margin = o_capital * mg_cap;
-        let profit = margin * percent / 100;
+    let o_capital = capitalVal;
+
+    for(let d=1; d<=daysVal; d++){
+        let margin = o_capital * marginCap;
+        let profit = margin * percentVal / 100;
         let mturn = margin + profit;
         let turnover = o_capital + profit;
 
-        let buy = margin, sell = mturn;
-        let tc = (buy+sell)*0.0006;
-        let sst = sell*0.001;
-        let stamp = buy*0.00003;
-        let ipft = (buy+sell)*0.000005;
-        let sebi = (buy+sell)*0.000001;
-        let brokerage = 40;
-        let gst = (tc+brokerage+sebi+ipft)*0.18;
+        let buy = margin;
+        let sell = mturn;
 
-        let charges = tc+sst+stamp+sebi+brokerage+gst+ipft;
+        let tc = (buy + sell) * 0.0006;
+        let sst = sell * 0.001;
+        let stamp = buy * 0.00003;
+        let ipft = (buy + sell) * 0.000005;
+        let sebi = (buy + sell) * 0.000001;
+        let brokerage = 40;
+        let gst = (tc + brokerage + sebi + ipft) * 0.18;
+
+        let charges = tc + sst + stamp + sebi + brokerage + gst + ipft;
         let net = turnover - charges;
 
         html += `
@@ -215,7 +227,7 @@ function calculate(){
             <td>Day ${d}</td>
             <td>${rnd(o_capital)}</td>
             <td>${rnd(margin)}</td>
-            <td>${percent}</td>
+            <td>${percentVal}</td>
             <td>${rnd(profit)}</td>
             <td>${rnd(mturn)}</td>
             <td>${rnd(turnover)}</td>
@@ -227,12 +239,17 @@ function calculate(){
     }
 
     html += "</table>";
-    result.innerHTML = html;
+    document.getElementById("result").innerHTML = html;
 }
 
-function ExportToExcel(){
-    let wb = XLSX.utils.table_to_book(document.getElementById("tbl"));
-    XLSX.writeFile(wb,"OptCalsi_AngelOne.xlsx");
+function exportExcel(){
+    let table = document.getElementById("calcTable");
+    if(!table){
+        alert("Please calculate first");
+        return;
+    }
+    let wb = XLSX.utils.table_to_book(table, {sheet:"Opt Calsi"});
+    XLSX.writeFile(wb, "OptCalsi_AngelOne.xlsx");
 }
 </script>
 
