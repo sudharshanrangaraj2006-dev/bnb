@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Equity Options Calsi Pro</title>
+
+<script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<style>
+:root{
+    --bg:#0B1220;
+    --card:#121A2F;
+    --accent:#F45C20;
+    --text:#EAEAEA;
+    --muted:#9AA4B2;
+    --border:#1E2A44;
+}
+*{ box-sizing:border-box; font-family:"Segoe UI",sans-serif; }
+body{ margin:0; background:var(--bg); color:var(--text); }
+
+.header{
+    padding:14px 18px;
+    background:#0E1628;
+    border-bottom:1px solid var(--border);
+    font-size:20px;
+    font-weight:600;
+    color:var(--accent);
+}
+
+.card{
+    max-width:1300px;
+    margin:15px auto;
+    background:var(--card);
+    border-radius:12px;
+    padding:18px;
+    box-shadow:0 0 0 1px var(--border);
+}
+
+.form-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+    gap:14px;
+}
+
+label{ font-size:12px; color:var(--muted); margin-bottom:4px; display:block; }
+
+input{
+    width:100%;
+    padding:10px;
+    border-radius:8px;
+    border:1px solid var(--border);
+    background:#0E1628;
+    color:white;
+    font-size:14px;
+}
+
+.actions{
+    margin-top:16px;
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+}
+
+.btn{
+    padding:11px 16px;
+    border:none;
+    border-radius:8px;
+    font-weight:600;
+    cursor:pointer;
+    font-size:13px;
+}
+
+.btn-primary{ background:var(--accent); color:#000; }
+.btn-secondary{ background:#1E2A44; color:white; }
+
+.summary{
+    margin-top:18px;
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+    gap:12px;
+}
+
+.summary div{
+    background:#0E1628;
+    padding:14px;
+    border-radius:10px;
+    border:1px solid var(--border);
+}
+
+.summary span{ color:var(--muted); font-size:12px; }
+
+.table-wrap{
+    overflow:auto;
+    margin-top:18px;
+    max-height:60vh;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    min-width:950px;
+}
+
+th{
+    position:sticky;
+    top:0;
+    background:#0E1628;
+    color:var(--accent);
+    padding:10px;
+    font-size:12px;
+    border-bottom:1px solid var(--border);
+}
+
+td{
+    padding:9px;
+    text-align:right;
+    border-bottom:1px solid var(--border);
+    font-size:13px;
+}
+
+td:first-child{
+    text-align:center;
+    color:var(--muted);
+}
+
+tr.highlight{ background:#1E2A44; }
+</style>
+</head>
+
+<body>
+
+<div class="header">Equity Intraday Calsi Pro</div>
+
+<div class="card">
+    <div class="form-grid">
+        <div>
+            <label>Capital</label>
+            <input type="number" id="capitalInput" placeholder="100000">
+        </div>
+        <div>
+            <label>Margin Cap (0.1 – 1)</label>
+            <input type="number" id="marginInput" step="0.01" placeholder="0.2">
+        </div>
+        <div>
+            <label>Return %</label>
+            <input type="number" id="percentInput" step="0.01" placeholder="1">
+        </div>
+        <div>
+            <label>No. of Days</label>
+            <input type="number" id="daysInput" placeholder="20">
+        </div>
+        <div>
+            <label>Go To Day</label>
+            <input type="number" id="gotoDayInput">
+        </div>
+    </div>
+
+    <div class="actions">
+        <button class="btn btn-primary" onclick="calculate()">Calculate</button>
+        <button class="btn btn-secondary" onclick="goToDay()">Go</button>
+        <button class="btn btn-secondary" onclick="exportExcel()">Export Excel</button>
+        <button class="btn btn-secondary" onclick="resetAll()">Reset</button>
+    </div>
+
+    <div class="summary" id="summary"></div>
+    <div class="table-wrap" id="result"></div>
+</div>
+
+<script>
+// Formatter
+const fmt = n => "₹ " + n.toLocaleString("en-IN",{minimumFractionDigits:2});
+
+// Round function
+function rnd(n){
+    return Math.round(n * 100) / 100;
+}
+
+function calculate(){
+    let capital = Number(capitalInput.value);
+    let marginCap = Number(marginInput.value);
+    let percent = Number(percentInput.value);
+    let days = Number(daysInput.value);
+
+    if(!capital || !marginCap || !percent || !days){
+        alert("Please fill all fields correctly");
+        return;
+    }
+
+    let html = `<table id="calcTable">
+        <tr>
+            <th>DAY</th>
+            <th>OPENING CAPITAL</th>
+            <th>BUYING</th>
+            <th>RETURN %</th>
+            <th>PROFIT</th>
+            <th>SELLING</th>
+            <th>GROSS CAPITAL</th>
+            <th>CHARGES</th>
+            <th>NET CAPITAL</th>
+        </tr>`;
+
+    let opCapital = capital;
+    let totalCharges = 0;
+
+    for(let d=1; d<=days; d++){
+        let margin = opCapital * marginCap;
+        let profit = margin * percent / 100;
+        let mTurn = margin + profit;
+        let gross = opCapital + profit;
+
+        let buy = margin;
+        let sell = mTurn;
+
+        // Charges
+        let tc = (buy * 0.0000325) + (sell * 0.0000325);
+        let sst = sell * 0.00025;
+        let stampduty = buy * 0.00003;
+        let sebi = (buy * 0.000001) + (sell * 0.000001);
+
+        let brokerage = 0;
+        brokerage += buy >= 66666 ? 20 : buy * 0.0003;
+        brokerage += sell >= 66666 ? 20 : sell * 0.0003;
+
+        let gst = (tc + brokerage + sebi) * 0.18;
+
+        let charges = tc + sst + stampduty + sebi + brokerage + gst;
+
+        // Rounding
+        opCapital = rnd(opCapital);
+        margin = rnd(margin);
+        profit = rnd(profit);
+        mTurn = rnd(mTurn);
+        gross = rnd(gross);
+        charges = rnd(charges);
+
+        let net = rnd(gross - charges);
+        totalCharges += charges;
+
+        html += `<tr id="day${d}">
+            <td>Day ${d}</td>
+            <td>${fmt(opCapital)}</td>
+            <td>${fmt(margin)}</td>
+            <td>${percent}</td>
+            <td>${fmt(profit)}</td>
+            <td>${fmt(mTurn)}</td>
+            <td>${fmt(gross)}</td>
+            <td>${fmt(charges)}</td>
+            <td>${fmt(net)}</td>
+        </tr>`;
+
+        opCapital = net;
+    }
+
+    html += "</table>";
+    result.innerHTML = html;
+
+    summary.innerHTML = `
+        <div><span>Final Capital</span><br><b>${fmt(opCapital)}</b></div>
+        <div><span>Total Profit</span><br><b>${fmt(opCapital - capital)}</b></div>
+        <div><span>Total Charges</span><br><b>${fmt(totalCharges)}</b></div>
+    `;
+}
+
+function goToDay(){
+    let day = Number(gotoDayInput.value);
+    document.querySelectorAll("tr").forEach(r=>r.classList.remove("highlight"));
+    let row = document.getElementById("day"+day);
+    if(row){
+        row.classList.add("highlight");
+        row.scrollIntoView({behavior:"smooth", block:"center"});
+    }
+}
+
+function exportExcel(){
+    let table = document.getElementById("calcTable");
+    if(!table) return;
+    let wb = XLSX.utils.table_to_book(table,{sheet:"Opt Calsi"});
+    XLSX.writeFile(wb,"opt_calsi.xlsx");
+}
+
+function resetAll(){
+    document.querySelectorAll("input").forEach(i=>i.value="");
+    result.innerHTML="";
+    summary.innerHTML="";
+}
+</script>
+
+</body>
+</html>
