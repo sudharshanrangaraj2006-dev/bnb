@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Equity Delivery Calsi Pro</title>
+
+<script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<style>
+:root{
+    --bg:#0B1220;
+    --card:#121A2F;
+    --accent:#F45C20;
+    --text:#EAEAEA;
+    --muted:#9AA4B2;
+    --border:#1E2A44;
+}
+*{ box-sizing:border-box; font-family:"Segoe UI",sans-serif; }
+body{ margin:0; background:var(--bg); color:var(--text); }
+
+.header{
+    padding:14px 18px;
+    background:#0E1628;
+    border-bottom:1px solid var(--border);
+    font-size:20px;
+    font-weight:600;
+    color:var(--accent);
+}
+
+.card{
+    max-width:1300px;
+    margin:15px auto;
+    background:var(--card);
+    border-radius:12px;
+    padding:18px;
+    box-shadow:0 0 0 1px var(--border);
+}
+
+.form-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+    gap:14px;
+}
+
+label{ font-size:12px; color:var(--muted); margin-bottom:4px; display:block; }
+
+input{
+    width:100%;
+    padding:10px;
+    border-radius:8px;
+    border:1px solid var(--border);
+    background:#0E1628;
+    color:white;
+    font-size:14px;
+}
+
+.actions{
+    margin-top:16px;
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+}
+
+.btn{
+    padding:11px 16px;
+    border:none;
+    border-radius:8px;
+    font-weight:600;
+    cursor:pointer;
+    font-size:13px;
+}
+
+.btn-primary{ background:var(--accent); color:#000; }
+.btn-secondary{ background:#1E2A44; color:white; }
+
+.summary{
+    margin-top:18px;
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+    gap:12px;
+}
+
+.summary div{
+    background:#0E1628;
+    padding:14px;
+    border-radius:10px;
+    border:1px solid var(--border);
+}
+
+.summary span{ color:var(--muted); font-size:12px; }
+
+.table-wrap{
+    overflow:auto;
+    margin-top:18px;
+    max-height:60vh;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    min-width:950px;
+}
+
+th{
+    position:sticky;
+    top:0;
+    background:#0E1628;
+    color:var(--accent);
+    padding:10px;
+    font-size:12px;
+    border-bottom:1px solid var(--border);
+}
+
+td{
+    padding:9px;
+    text-align:right;
+    border-bottom:1px solid var(--border);
+    font-size:13px;
+}
+
+td:first-child{
+    text-align:center;
+    color:var(--muted);
+}
+
+tr.highlight{ background:#1E2A44; }
+</style>
+</head>
+
+<body>
+
+<div class="header">Equity Delivery Calsi (NSE)</div>
+
+<div class="card">
+    <div class="form-grid">
+        <div>
+            <label>Capital</label>
+            <input type="number" id="capitalInput" placeholder="100000">
+        </div>
+        <div>
+            <label>Return %</label>
+            <input type="number" id="percentInput" step="0.01" placeholder="1">
+        </div>
+        <div>
+            <label>No. of Days</label>
+            <input type="number" id="daysInput" placeholder="20">
+        </div>
+        <div>
+            <label>Go To Day</label>
+            <input type="number" id="gotoDayInput">
+        </div>
+    </div>
+
+    <div class="actions">
+        <button class="btn btn-primary" onclick="calculate()">Calculate</button>
+        <button class="btn btn-secondary" onclick="goToDay()">Go</button>
+        <button class="btn btn-secondary" onclick="exportExcel()">Export Excel</button>
+        <button class="btn btn-secondary" onclick="resetAll()">Reset</button>
+    </div>
+
+    <div class="summary" id="summary"></div>
+    <div class="table-wrap" id="result"></div>
+</div>
+
+<script>
+const fmt = n => "₹ " + n.toLocaleString("en-IN",{minimumFractionDigits:2});
+const rnd = n => Math.round(n * 100) / 100;
+
+function calculate(){
+    let capital = Number(capitalInput.value);
+    let percent = Number(percentInput.value);
+    let days = Number(daysInput.value);
+
+    if(!capital || !percent || !days){
+        alert("Fill all fields");
+        return;
+    }
+
+    let html = `<table id="calcTable">
+    <tr>
+        <th>DAY</th>
+        <th>OPENING</th>
+        <th>BUY</th>
+        <th>SELL</th>
+        <th>PROFIT</th>
+        <th>CHARGES</th>
+        <th>NET</th>
+    </tr>`;
+
+    let opCapital = capital;
+    let totalCharges = 0;
+
+    for(let d=1; d<=days; d++){
+
+        let buy = opCapital;
+        let profit = buy * percent / 100;
+        let sell = buy + profit;
+
+        // === DELIVERY CHARGES ===
+        let exchange = (buy * 0.0000297) + (sell * 0.0000297);
+        let stt = (buy * 0.001) + (sell * 0.001);
+        let stampDuty = buy * 0.00015;
+        let sebi = (buy * 0.000001) + (sell * 0.000001);
+        let ipft = (buy * 0.000001) + (sell * 0.000001);
+        let brokerage = 0;
+        let gst = (exchange + sebi) * 0.18;
+        let dp = sell > 0 ? 15.93 : 0;
+
+        let charges = exchange + stt + stampDuty + sebi + ipft + brokerage + gst + dp;
+
+        let net = sell - charges;
+
+        totalCharges += charges;
+
+        html += `<tr id="day${d}">
+            <td>Day ${d}</td>
+            <td>${fmt(rnd(opCapital))}</td>
+            <td>${fmt(rnd(buy))}</td>
+            <td>${fmt(rnd(sell))}</td>
+            <td>${fmt(rnd(profit))}</td>
+            <td>${fmt(rnd(charges))}</td>
+            <td>${fmt(rnd(net))}</td>
+        </tr>`;
+
+        opCapital = net;
+    }
+
+    html += "</table>";
+    result.innerHTML = html;
+
+    summary.innerHTML = `
+        <div><span>Final Capital</span><br><b>${fmt(rnd(opCapital))}</b></div>
+        <div><span>Total Profit</span><br><b>${fmt(rnd(opCapital - capital))}</b></div>
+        <div><span>Total Charges</span><br><b>${fmt(rnd(totalCharges))}</b></div>
+    `;
+}
+
+function goToDay(){
+    let day = Number(gotoDayInput.value);
+    document.querySelectorAll("tr").forEach(r=>r.classList.remove("highlight"));
+    let row = document.getElementById("day"+day);
+    if(row){
+        row.classList.add("highlight");
+        row.scrollIntoView({behavior:"smooth", block:"center"});
+    }
+}
+
+function exportExcel(){
+    let table = document.getElementById("calcTable");
+    if(!table) return;
+    let wb = XLSX.utils.table_to_book(table,{sheet:"Delivery"});
+    XLSX.writeFile(wb,"delivery_calc.xlsx");
+}
+
+function resetAll(){
+    document.querySelectorAll("input").forEach(i=>i.value="");
+    result.innerHTML="";
+    summary.innerHTML="";
+}
+</script>
+
+</body>
+</html>
